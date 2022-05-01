@@ -18,11 +18,20 @@ Goal: make it less painful to work with Roll 20 macros
 
 [Dungeon World Move Template](https://github.com/Roll20/roll20-character-sheets/blob/master/Dungeon%20World%20by%20Roll20/Dungeon%20World.html#L747-L811)
 
+Unresolved macro
+
+```
+&{template:move} {{charname=@{selected|character_name}}} {{movename=Scout Ahead}} {{trigger=When you take point and look for anything out of the ordinary, roll + WIS}}  {{success=Choose 2}} {{partial=Choose 1}} {{miss=}} {{doroll=[[2d6]]}} {{result=[[@{selected|rolltype} + @{selected|wisdom_mod}[wisdom] + ?{Bonus|0}[bonus] + (@{selected|rollforward})[forward] + @{selected|global_ongoing}[ongoing global]]]}} {{details=• You get the drop on whatever lies ahead
+• You discern a beneficial aspect of the terrain - shortcut, shelter, or tactical advantage (describe it)
+• You make a **Discovery** (ask the GM)
+• You notice sign of a nearby **Danger** - ask the GM what it is, and what it might signify}}
+```
+
 "Resolved" macro:
 
 ```
-&{template:move} {{charname=@{TEST|character_name}}} {{movename=Volley}} {{trigger=When you take aim and shoot at an enemy at range}} {{success=You have a clear shot—deal your damage.}} {{partial=Deal your damage, and choose one:
-• You have to move to get the shot placing you in danger of the GM's choice
-• You have to take what you can get: -1d6 damage.
-• You have to take several shots, reducing your ammo by one.}} {{miss=Miss!}} {{doroll=[[1]]}} {{result=[[@{TEST|rolltype} + @{TEST|dexterity_mod}[dexterity] +0 + (@{TEST|rollforward})[forward] + @{TEST|global_ongoing}[ongoing global]]]}} {{details=}}
+&{template:move} {{charname=@{selected|character_name}}} {{movename=Scout Ahead}} {{trigger=When you take point and look for anything out of the ordinary, roll + WIS}}  {{success=Choose 2}} {{partial=Choose 1}} {{miss=}} {{doroll=[[2d6]]}} {{result=[[@{selected|rolltype} + @{selected|wisdom_mod}[wisdom] + ?{Bonus|0}[bonus] + (@{selected|rollforward})[forward] + @{selected|global_ongoing}[ongoing global]]]}} {{details=• You get the drop on whatever lies ahead
+• You discern a beneficial aspect of the terrain - shortcut, shelter, or tactical advantage (describe it)
+• You make a **Discovery** (ask the GM)
+• You notice sign of a nearby **Danger** - ask the GM what it is, and what it might signify}}
 ```
