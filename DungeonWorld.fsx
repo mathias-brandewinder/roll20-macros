@@ -2,6 +2,33 @@
 Goal: write out macros that follow the Dungeon World Move template
 *)
 
+module Sheet =
+
+    type Ability =
+        | DEX
+        | STR
+        | INT
+        | WIS
+        | CHA
+        | CON
+
+    let score (ability: Ability) =
+        match ability with
+        | DEX -> "dexterity"
+        | STR -> "strength"
+        | INT -> "intelligence"
+        | WIS -> "wisdom"
+        | CHA -> "charisma"
+        | CON -> "constitution"
+
+    let modifier (ability: Ability) =
+        $"{score ability}_mod"
+
+    type Attribute = {
+        Name: string
+        Value: string
+        }
+
 [<RequireQualifiedAccess>]
 module Format =
 
@@ -14,6 +41,7 @@ module Format =
     let roll (desc: string) =
         $"[[{desc}]]"
 
+open Sheet
 
 /// Template for a Move
 type Move = {
@@ -29,34 +57,38 @@ type Move = {
     Miss: string
     /// Additional information about the Move
     Details: string
-    /// Base Roll
-    Roll: Option<string>
+    /// Ability
+    Ability: Option<Ability>
     }
 
 let eval (move: Move) =
+    let result =
+        "@{selected|rolltype}"
+        +
+        (move.Ability
+        |> Option.map (fun ability ->
+            $" + @{{selected|{modifier ability}}}[{ability}]")
+        |> Option.defaultValue "")
+        +
+        " + ?{Bonus|0}[bonus] + (@{selected|rollforward})[Forward] + @{selected|global_ongoing}[Ongoing]"
     [
         Format.template "move"
         Format.prop "movename" move.Name
         Format.prop "charname" "@{selected|character_name}"
-        Format.prop "trigger" move.Trigger
+        Format.prop "trigger" (move.Trigger + (move.Ability |> Option.map (fun ability -> $" + **{ability}**") |> Option.defaultValue ""))
         Format.prop "success" move.Success
         Format.prop "partial" move.Partial
         Format.prop "miss" move.Miss
         Format.prop "details" move.Details
-        Format.prop "doroll" (move.Roll |> Option.defaultValue "@{selected|rolltype}" |> Format.roll)
-        Format.prop
-            "result"
-            (move.Roll
-            |> Option.map (fun exp -> exp + " + @{selected|strength_mod}[Strength!]")
-            |> Option.defaultValue "@{selected|rolltype}"
-            |> Format.roll)
+        Format.prop "doroll" ("@{selected|rolltype}" |> Format.roll)
+        Format.prop "result" (Format.roll result)
     ]
     |> String.concat " "
 
 let scoutAhead: Move = {
     Name = "Test Scout Ahead"
-    Trigger = "When you take point and look for anything out of the ordinary, roll + WIS"
-    Roll = Some "2d6"
+    Trigger = "When you take point and look for anything out of the ordinary, roll"
+    Ability = Some WIS
     Success = "Choose 2"
     Partial = "Choose 1"
     Miss = "Mark XP"
@@ -67,18 +99,5 @@ let scoutAhead: Move = {
 """
     }
 
-let herculeanAppetites: Move = {
-    Name = "Herculean Appetites"
-    Trigger = "While pursuing one of your appetites if you would roll for a move, instead of rolling 2d6 you roll 1d6+1d8"
-    Roll = Some "1d6 + 1d8"
-    Success = "Success"
-    Partial = "Partial"
-    Miss = "Mark XP"
-    Details = "If the d6 is the higher die of the pair, the GM will also introduce a complication or danger that comes about due to your heedless pursuits."
-    }
-
 scoutAhead
-|> eval
-
-herculeanAppetites
 |> eval
