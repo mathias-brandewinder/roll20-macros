@@ -43,6 +43,10 @@ module Format =
 
 open Sheet
 
+type Modifier =
+    | Ability of Ability
+    | Prompt of string
+
 /// Template for a Move
 type Move = {
     /// Name of the Move
@@ -58,30 +62,44 @@ type Move = {
     /// Additional information about the Move
     Details: string
     /// Ability
-    Ability: Option<Ability>
+    Modifier: Option<Modifier>
     }
-
-let eval (move: Move) =
-    let result =
+    with
+    member this.FormatTrigger =
+        this.Trigger
+        +
+        ", roll + "
+        +
+        match this.Modifier with
+        | None -> "nothing"
+        | Some modifier ->
+            match modifier with
+            | Ability ability -> $"**{ability}**"
+            | Prompt prompt -> $"**{prompt}**"
+    member this.EvalResult =
         "@{selected|rolltype}"
         +
-        (move.Ability
-        |> Option.map (fun ability ->
-            $" + @{{selected|{modifier ability}}}[{ability}]")
-        |> Option.defaultValue "")
+        match this.Modifier with
+        | None -> ""
+        | Some modifier ->
+            match modifier with
+            | Ability ability -> $" + @{{selected|{Sheet.modifier ability}}}[{ability}]"
+            | Prompt prompt -> $" + ?{{{prompt}|0}}[{prompt}]"
         +
-        " + ?{Bonus|0}[Bonus] + (@{selected|rollforward})[Forward] + @{selected|global_ongoing}[Ongoing]"
+        " + ?{Bonus (Forward @{selected|rollforward}, Global @{selected|global_ongoing})|0}[Bonus] + (@{selected|rollforward})[Forward] + @{selected|global_ongoing}[Ongoing]"
+
+let eval (move: Move) =
     [
         Format.template "move"
         Format.prop "movename" move.Name
         Format.prop "charname" "@{selected|character_name}"
-        Format.prop "trigger" (move.Trigger + (move.Ability |> Option.map (fun ability -> $" + **{ability}**") |> Option.defaultValue ""))
+        Format.prop "trigger" (move.FormatTrigger)
         Format.prop "success" move.Success
         Format.prop "partial" move.Partial
         Format.prop "miss" move.Miss
         Format.prop "details" move.Details
         Format.prop "doroll" ("@{selected|rolltype}" |> Format.roll)
-        Format.prop "result" (Format.roll result)
+        Format.prop "result" (move.EvalResult |> Format.roll)
     ]
     |> String.concat " "
 
@@ -89,8 +107,8 @@ module Moves =
 
     let scoutAhead: Move = {
         Name = "Scout Ahead"
-        Trigger = "When you take point and look for anything out of the ordinary, roll"
-        Ability = Some WIS
+        Trigger = "When you **take point and look for anything out of the ordinary**"
+        Modifier = Some (Ability WIS)
         Success = "Choose 2"
         Partial = "Choose 1"
         Miss = "Mark XP"
@@ -103,8 +121,8 @@ module Moves =
 
     let navigate: Move = {
         Name = "Navigate"
-        Trigger = "When you **plot the best course through dangerous or unfamiliar lands**, roll"
-        Ability = Some INT
+        Trigger = "When you **plot the best course through dangerous or unfamiliar lands**"
+        Modifier = Some (Ability INT)
         Success = "You avoid dangers and distractions and make good time, reaching a point of the GM's choosing before you need to **Make Camp**"
         Partial = "GM chooses 1 from the list below"
         Miss = "Mark XP"
@@ -116,8 +134,8 @@ module Moves =
 
     let staySharp: Move = {
         Name = "Stay Sharp"
-        Trigger = "When you **are on watch and something approaches**, roll"
-        Ability = Some WIS
+        Trigger = "When you **are on watch and something approaches**"
+        Modifier = Some (Ability WIS)
         Success = "You notice in time to alert everyone and prepare a response, all party members take +1 forward"
         Partial = "You manage to sound the alarm"
         Miss = "Mark XP, and whatever approaches has the drop on you"
@@ -126,8 +144,8 @@ module Moves =
 
     let makeCamp: Move = {
         Name = "Make Camp"
-        Trigger = "When you **settle in to rest**, choose one member of the party to **Manage Provisions**. Then, if you eat and drink and have enough XP, you may Level Up. If you are bedding down in dangerous territory, decide on a watch order. Then, the GM chooses one person on watch during the night to roll +nothing"
-        Ability = None
+        Trigger = "When you **settle in to rest**, choose one member of the party to **Manage Provisions**. Then, if you eat and drink and have enough XP, you may Level Up. If you are bedding down in dangerous territory, decide on a watch order. Then, the GM chooses one person on watch during the night"
+        Modifier = None
         Success = "The night passes without incident"
         Partial = "GM chooses 1 from the list below"
         Miss = "Everyone marks XP, and a Danger manifests. You'd better **Stay Sharp**!"
@@ -140,13 +158,25 @@ When you wake from at least a few hours of uninterrupted sleep, and you ate and 
 
     let manageProvisions: Move = {
         Name = "Manage Provisions"
-        Trigger = "When you **prepare and distribute food for the party**, roll"
-        Ability = Some WIS
+        Trigger = "When you **prepare and distribute food for the party**"
+        Modifier = Some (Ability WIS)
         Success = "Choose 1 from the list below"
         Partial = "The party consumes the expected amount of rations"
         Miss = "Mark XP"
         Details = """• Careful management reduces the amount of rations consumed (ask the GM by how much)
 • The party consumes the expected amount and the food you prepare is excellent - describe it, and everyone who licks their lips takes +1 forward"""
+        }
+
+    let orderFollower: Move = {
+        Name = "Order Follower"
+        Trigger = "When you **order or expect a follower to do something dangerous, degrading, or contrary to their instinct**"
+        Modifier = Some (Prompt "Loyalty")
+        Success = "They do it, now"
+        Partial = "They do it, but the GM picks one from the list below"
+        Miss = "Mark XP"
+        Details = """• Decrease the follower's **Loyalty** by 1
+• They complain loudly, now or later, and demand something in return
+• Caution, laziness or fear makes them take a long time to get it done"""
         }
 
 Moves.scoutAhead
@@ -163,3 +193,5 @@ Moves.makeCamp
 
 Moves.manageProvisions
 |> eval
+
+Moves.orderFollower |> eval
