@@ -18,6 +18,15 @@ Goal: make it less painful to work with Roll 20 macros
 
 [Dungeon World Move Template](https://github.com/Roll20/roll20-character-sheets/blob/master/Dungeon%20World%20by%20Roll20/Dungeon%20World.html#L747-L811)
 
+Templates:
+
+dwgeneral
+
+move
+
+spell
+
+
 Unresolved macro
 
 ```
